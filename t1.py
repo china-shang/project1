@@ -22,7 +22,7 @@ for i in range(ip_pool.ip_count()):
     ip = ip_pool.get_ip()
     start = time.time()
     try:
-        res = requests.get("https://www.baidu.com",timeout = 10,  proxies = dict(https = ip.ip + ":" + str(ip.port)))
+        res = requests.get("https://github.com",timeout = 10,  proxies = dict(https = ip.ip + ":" + str(ip.port)))
 
     except requests.exceptions.ProxyError as e :
         print("ProxyError")

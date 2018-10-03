@@ -6,6 +6,7 @@ import requests
 from requests import Session, Request
 from bs4 import BeautifulSoup as Soup
 t = ""
+# get xi ip
 
 class IP(object):
     def __init__(self, tr):

@@ -6,6 +6,9 @@ import time
 import requests 
 from requests import Session, Request, get
 from bs4 import BeautifulSoup as Soup
+from logger import get_logger
+
+logger = get_logger(__name__)
 
 class IP(object):
     def __init__(self, ip, port,rate = 0):
@@ -35,6 +38,7 @@ class IPPool(object):
         return l
 
     def get_360_ip(self):
+        logger.info("get 360ip")
         url = "http://www.swei360.com/free/?page="
         l = []
         for i in range(1, IPPool.end_page + 1):
@@ -51,10 +55,12 @@ class IPPool(object):
 
     def get_Xi_ip(self):
         l = []
+        logger.info("get xi ip ")
 
         return l
 
     def get_Yun_ip(self):
+        logger.info("get yup ip ")
         url = "http://www.ip3366.net/free/?stype=1&page="
         l = []
         for i in range(1, IPPool.end_page + 1):
