@@ -12,12 +12,13 @@ def get_logger(module_name = __name__):
     ch = logging.StreamHandler()
     ch.setFormatter(formatter)
     ch.setLevel(logging_level)
-    ch.addFilter(lambda record:record.levelno == logging.INFO or record.levelno == logging.DEBUG)
+    ch.addFilter(lambda record:record.levelno == logging.INFO )
 
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(funcName)s -  %(message)s', '%m/%d %H:%M:%S')
     ch1 = logging.StreamHandler()
     ch1.setFormatter(formatter)
-    ch1.setLevel(logging.WARNING)
+    ch1.setLevel(logging_level)
+    ch1.addFilter(lambda record:record.levelno != logging.INFO )
 
     logger.addHandler(ch)
     logger.addHandler(ch1)
