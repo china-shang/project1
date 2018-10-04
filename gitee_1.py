@@ -20,13 +20,15 @@ i = "a"
 page = "1"
 
 class Model(dict):
-    def __init__(self, desc,time,watch,star,fork, name): 
+    def __init__(self, desc,time,watch,star,fork, name, url): 
         self['desc'] = desc 
         self['time'] = time 
         self['watch'] = watch
         self['star'] = star 
         self['fork'] = fork 
         self['name'] = name 
+        self['source'] = "gitee"
+        self['url'] = url
 
 class Models(object):
     def __init__(self, max_size = 100):
@@ -39,7 +41,6 @@ class Models(object):
             self.l.append(q.get())
             if len(self.l) >= self.max_size:
                 self.save()
-            time.sleep(3)
 
     def save(self):
         print("save item")
@@ -76,8 +77,8 @@ def seek(q):
         for i in range(1,pages + 1 ):
             f(q, i)
 
-    with open("has","a") as fp:
-        fp.write(f"\n{q}\n{pages}\n")
+    #with open("has","a") as fp:
+        #fp.write(f"\n{q}\n{pages}\n")
 
 def f(i, page):
     resp = Get(f"https://gitee.com/search?page={page}&q={i}&sort=stars_count&type=")
@@ -87,6 +88,7 @@ def f(i, page):
     items = sp.select(".content-list > div")
     item = items[0]
     name = item.select_one(".ellipsis")['title']
+    url = item.select_one(".ellipsis")['href']
     label = item.select_one(".label")
     if(label is None):
         label = ""
@@ -118,17 +120,17 @@ def f(i, page):
         print(e)
         fork = ""
 
-    m = Model(desc, time, watch, star, fork, name)
+    m = Model(desc, time, watch, star, fork, name, url)
     #print(name)
     #threading.currentThread().getName()
-    print(f"name = {name} type = {label} \ndesc = {desc}update-time = {time}\nwatch_num = {watch} star_num = {star} fork_num = {fork}\n")
+    print(f"name = {name} url = {url} type = {label} \ndesc = {desc}update-time = {time}\nwatch_num = {watch} star_num = {star} fork_num = {fork}\n")
     if(q.full()):
         logger.warn("full")
     q.put(m)
 
 q = queue.Queue(100)
 ms = Models()
-executor = ThreadPoolExecutor(max_workers = 2)
+executor = ThreadPoolExecutor(max_workers = 20)
 fut = executor.submit(ms.update)
 
 futures_to_page = {executor.submit(seek,q) : q for q in s}
