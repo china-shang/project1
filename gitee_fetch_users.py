@@ -33,6 +33,8 @@ class TaskQueue(queue.Queue):
         self._get_cv = threading.Condition(self._lock)
         self.count = 0
         self.workers = []
+        self._last = time.time()
+        self._during = 60
         super().__init__(self.maxsize)
 
     def add_worker(self, worker):
@@ -73,6 +75,8 @@ class TaskQueue(queue.Queue):
 
     def get(self, block = True, timeout = None):
         with self._get_cv:
+            if time.time() - self._last > self._during:
+                self.save()
 
             if not self.empty():
                 pass
@@ -87,7 +91,6 @@ class TaskQueue(queue.Queue):
             self._put_cv.notify(self.maxsize - self.qsize())
         return item
     
-
 
 def init_queue(q):
     for i in range(ord('a'), ord('z') + 1):
@@ -289,16 +292,14 @@ def test():
         print(resp.text)
         print(f"url = {url}")
 
-
-
 if __name__ == "__main__":
+    futs = []
+    workers = []
+    max_workers = 1
     try:
         q = TaskQueue()
         init_queue(q)
-        max_workers = 1
         executor = ThreadPoolExecutor(max_workers = max_workers )
-        futs = []
-        workers = []
         for i in range(max_workers):
             worker = Worker(q, only_user = True)
             workers.append(worker)
@@ -307,7 +308,7 @@ if __name__ == "__main__":
 
         for fut in concurrent.futures.as_completed(futs):
             fut.result()
-    except KeyboardInterrupt:
+    except (KeyboardInterrupt, SystemExit):
         logger.warning("start stop worker, and save file")
         for i in workers:
             i.stop()
