@@ -15,7 +15,7 @@ import threading
 
 logger = get_logger(__name__)
 header = {
-    "Authorization":"bearer f9ae98acf445d8bf8b1067551563e901bdb7f476"
+    "Authorization":"bearer 148bc2df28a4ca89d04fe46c6fc156f48b4c12dc"
 }
 data = {'query':'{ repository(owner: "octocat", name: "Hello-World") { pullRequest(number: 1) { commits(first: 10) { edges { node { commit { oid message } } } } comments(first: 10) { edges { node { body author { login } } } } reviews(first: 10) { edges { node { state } } } } } }'}
 
@@ -38,3 +38,5 @@ chain = Chain("search")\
              (last = 1).\
              get("totalCount"))
 
+resp = Post("https://api.github.com/graphql", json =chain.to_dict(), headers = header )
+logger.info(resp.json())
