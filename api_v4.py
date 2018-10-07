@@ -15,9 +15,11 @@ import threading
 
 logger = get_logger(__name__)
 header = {
-    "Authorization":"bearer 148bc2df28a4ca89d04fe46c6fc156f48b4c12dc"
+    "Authorization":"bearer 8108416bed7d56101b06c47dd2255a475d1e03e8"
 }
-data = {'query':'{ repository(owner: "octocat", name: "Hello-World") { pullRequest(number: 1) { commits(first: 10) { edges { node { commit { oid message } } } } comments(first: 10) { edges { node { body author { login } } } } reviews(first: 10) { edges { node { state } } } } } }'}
+#sample  -  - 
+{'query':'{ repository(owner: "octocat", name: "Hello-World") { pullRequest(number: 1) { commits(first: 10) { edges { node { commit { oid message } } } } comments(first: 10) { edges { node { body author { login } } } } reviews(first: 10) { edges { node { state } } } } } }'}
+ #-  - 
 
 
 get_rate_chain = Chain("rateLimit").get("cost limit remaining resetAt")
