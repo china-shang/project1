@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 import logging
+import sys
 
 logging_level = logging.DEBUG
 
@@ -9,7 +10,7 @@ def get_logger(module_name = __name__):
     logger.setLevel(logging_level)
 
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s', '%m/%d %H:%M:%S')
-    ch = logging.StreamHandler()
+    ch = logging.StreamHandler(sys.stdout)
     ch.setFormatter(formatter)
     ch.setLevel(logging_level)
     ch.addFilter(lambda record:record.levelno == logging.INFO )

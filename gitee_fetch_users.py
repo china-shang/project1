@@ -295,7 +295,7 @@ def test():
 if __name__ == "__main__":
     futs = []
     workers = []
-    max_workers = 1
+    max_workers = 100
     try:
         q = TaskQueue()
         init_queue(q)
