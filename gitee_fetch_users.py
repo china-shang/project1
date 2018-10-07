@@ -93,7 +93,7 @@ class TaskQueue(queue.Queue):
     
 
 def init_queue(q):
-    for i in range(ord('a'), ord('z') + 1):
+    for i in range(ord('a'), ord('b') + 1):
         l = fetch_one_only(i, 1)
         for i in l:
             item = i.url.split("/")[1]
@@ -139,7 +139,13 @@ class Worker(object):
         self._fetch_users()
 
     def _fetch_projects(self, sp:Soup):
-        count = int(sp.select_one(".circular").text)
+        count_cs = sp.select_one(".circular")
+        if(count_cs is None):
+            logger.info(f"{self._now_url} no project")
+            count = 0
+            return 
+        else:
+            count = int(count_cs.text)
         self._extract_project(sp)
         t = sp.select(".pagination > a.item")
         logger.info(f"has {count} project page= {len(t)}")
@@ -162,6 +168,7 @@ class Worker(object):
             watches = int(items[3].text)
         except Exception as e:
             print(items)
+        return  [followers,stars,following,watches]
         logger.info( f"followers = {followers}, stars = {stars}, following = {following}, watches = {watches}")
 
     def _extract_users(self, sp:Soup):
@@ -250,10 +257,14 @@ class Worker(object):
                 label = lang[0].text
             watch = int(project.select("li.watch > a")[1].text)#index :1 3 5
             star = int(project.select("li.star > a")[1].text)#index :1 3 5
-            fork = int(project.select("li.fork > a")[1].text)#index :1 3 5
+            try:
+                fork = int(project.select("li.fork > a")[1].text)#index :1 3 5
+            except IndexError:
+                fork = 0
             m = Model(desc, time, watch, star, fork, name, url, label)
             ms.append(m)
-            logger.info(f"fork = {fork},star = {star},watch = {watch},label = {label},url = {url},time = {time},desc = {desc}")
+            logger.debug(f"fork = {fork},star = {star},watch = {watch},label = {label},url = {url},time = {time},desc = {desc}")
+        return ms
 
 import random
 def put(q):

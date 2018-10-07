@@ -9,13 +9,13 @@ def get_logger(module_name = __name__):
     logger = logging.getLogger(module_name)
     logger.setLevel(logging_level)
 
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(message)s', '%m/%d %H:%M:%S')
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s  - %(threadName)s - %(name)s - %(message)s', '%m/%d %H:%M:%S')
     ch = logging.StreamHandler(sys.stdout)
     ch.setFormatter(formatter)
     ch.setLevel(logging_level)
     ch.addFilter(lambda record:record.levelno == logging.INFO )
 
-    formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(name)s - %(funcName)s -  %(message)s', '%m/%d %H:%M:%S')
+    formatter = logging.Formatter('%(asctime)s - %(levelname)s - - %(threadName)s -%(name)s - %(funcName)s -  %(message)s', '%m/%d %H:%M:%S')
     ch1 = logging.StreamHandler()
     ch1.setFormatter(formatter)
     ch1.setLevel(logging_level)
