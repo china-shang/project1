@@ -26,7 +26,7 @@ get_rate_chain = Chain("rateLimit").get("cost limit remaining resetAt")
 resp = Post("https://api.github.com/graphql", json =get_rate_chain.to_dict(), headers = header )
 logger.info(resp.json())
 
-chain = Chain("search")\
+search_chain = Chain("search")\
         (type = Type("REPOSITORY"), query = "a sort:forks", first = 100)\
         .get("repositoryCount")\
         .get(Chain("pageInfo")\
@@ -40,5 +40,34 @@ chain = Chain("search")\
              (last = 1).\
              get("totalCount"))
 
-resp = Post("https://api.github.com/graphql", json =chain.to_dict(), headers = header )
+
+#owner_chain = Chain("repositoryOwner")\
+        #(login = "3rf")\
+        #.get(Chain("... on User").get(Chain("organizations")\
+                                     #(first = 10)\
+                                     #.nodes.get("login")))
+             #(first = 10)\
+             #.nodes\
+            #.get("login"))
+
+owner_chain = Chain("repositoryOwner")\
+        (login = "3rf")\
+        .get(Chain("... on User")\
+             .get(Chain("organizations")\
+                  (first = 10)\
+                  .nodes.get("login")),Chain("... on Organization")\
+             .get("login") )
+
+#t = {'query': '{ repositoryOwner(login:"gh-impact"){ ... on User { login  }... on Organization{ login }}}'}
+#t = {'query': '{ repositoryOwner(login:"3rf"){ ... on User { organizations(first:10){ nodes { login  } }}}}'}
+
+
+#logger.info(search_chain.str())
+#resp = Post("https://api.github.com/graphql", json =search_chain.to_dict(), headers = header )
+#logger.info(resp.json())
+
+logger.info(owner_chain.to_dict())
+resp = Post("https://api.github.com/graphql", json =owner_chain.to_dict(), headers = header )
+#resp = Post("https://api.github.com/graphql", json =t, headers = header )
 logger.info(resp.json())
+
