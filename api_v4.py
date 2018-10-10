@@ -15,7 +15,8 @@ import threading
 
 logger = get_logger(__name__)
 header = {
-    "Authorization":"bearer 8108416bed7d56101b06c47dd2255a475d1e03e8"
+    "Authorization":"bearer 6d551a019223e4345e064de043d1fe46b9cd0260", 
+    "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0"
 }
 #sample  -  - 
 {'query':'{ repository(owner: "octocat", name: "Hello-World") { pullRequest(number: 1) { commits(first: 10) { edges { node { commit { oid message } } } } comments(first: 10) { edges { node { body author { login } } } } reviews(first: 10) { edges { node { state } } } } } }'}

@@ -25,7 +25,8 @@ count = 0
 logger = get_logger(__name__)
 logger.setLevel(logging.DEBUG)
 header = {
-    "Authorization":"bearer 8108416bed7d56101b06c47dd2255a475d1e03e8"
+    "Authorization":"bearer 6d551a019223e4345e064de043d1fe46b9cd0260", 
+    "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0"
 }
 get_rate_chain = Chain("rateLimit").get("cost limit remaining resetAt")
 
@@ -118,7 +119,8 @@ async def fetch_data_from_user(q:asyncio.Queue):
 
 class Worker(object):
     header = {
-        "Authorization":"bearer 8108416bed7d56101b06c47dd2255a475d1e03e8"
+        "Authorization":"bearer 6d551a019223e4345e064de043d1fe46b9cd0260", 
+        "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0"
     }
     api_url = "https://api.github.com/graphql"
     def __init__(self):
@@ -148,6 +150,7 @@ class RateLimitWorker(Worker):
         async with self._client.post(self.api_url,json = self._chain.to_dict()) as resp:
             print(f"api_url = {self.api_url}")
             result = await resp.json()
+            print(result)
             return result['data']
 
 class InitWorker(Worker):
@@ -491,15 +494,15 @@ class FetchWorker(Worker):
                         during = random.randint(10, 20)
                         during += fail_addition
                         logger.warning(f"has abuse , sleep{during}, fail_addition = {fail_addition}, min_fail_during = {min_fail_during}, now_fail_during = {now_fail_during}")
-                    logger.error(f"result = {raw_data}")
-                    if "abuse" in raw_data['documentation_url'] :
-                        during = random.randint(10, 20)
-                        logger.warning(f"has abuse , sleep{during}")
-                        time.sleep(during)
-                        async with RateLimitWorker() as worker:
-                            result = await worker.do()
-                            logger.info(result)
-                        return 
+                        logger.error(f"result = {raw_data}")
+                        if "abuse" in raw_data['documentation_url'] :
+                            during = random.randint(10, 20)
+                            logger.warning(f"has abuse , sleep{during}")
+                            time.sleep(during)
+                            async with RateLimitWorker() as worker:
+                                result = await worker.do()
+                                logger.info(result)
+                            return 
                 data = raw_data['data']
 
                 if has_more_members:
