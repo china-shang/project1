@@ -48,7 +48,7 @@ class OwnerQueue(asyncio.Queue):
         return True
 
     async def get(self):
-        logger.info(f"remining {self.qsize()}")
+        #logger.info(f"remining {self.qsize()}")
         result = await super().get()
         return result
 

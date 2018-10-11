@@ -18,10 +18,11 @@ import asyncio
 import itertools
 
 
-last_fail_time = 0
-min_fail_during = 0
+last_fail_time = time.time()
+min_fail_during = 10000
 fail_addition = 0
 count = 0
+start_time = time.time()
 logger = get_logger(__name__)
 logger.setLevel(logging.DEBUG)
 header = {
@@ -32,7 +33,7 @@ get_rate_chain = Chain("rateLimit").get("cost limit remaining resetAt")
 
 async def fetch_users(q):
     search_user_chain = Chain("search")\
-            (type = Type("REPOSITORY"), query = f"{q} sort:forks", first = 10)\
+            (type = Type("REPOSITORY"), query = f"{q} sort:forks", first = 100)\
             .nodes\
             .on("Repository")\
             .get(Chain("owner").get("login"))
@@ -65,7 +66,7 @@ async def handle_user(user:Owner):
                 .nodes\
                 .get("login"))\
             .get(Chain("organizations")\
-                (first = 10)\
+                (first = 100)\
                  .get(Chain("pageInfo")\
                      .get("endCursor hasNextPage"))\
                 .nodes\
@@ -88,7 +89,7 @@ async def handle_org(org:Owner):
     chain = Chain("organization")\
             (login = org.login)\
             .get(Chain("members")\
-                (first = 10)\
+                (first = 100)\
                  .get(Chain("pageInfo")\
                      .get("endCursor hasNextPage"))\
                 .nodes\
@@ -119,12 +120,13 @@ async def fetch_data_from_user(q:asyncio.Queue):
 
 class Worker(object):
     header = {
-        "Authorization":"bearer 6d551a019223e4345e064de043d1fe46b9cd0260", 
+        "Authorization":"bearer  5b83f10f236168948745f3329b5b9f50accdc5cb", 
         "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0"
     }
     api_url = "https://api.github.com/graphql"
+
     def __init__(self):
-        self._client = Session(headers = Worker.header)
+        self._client = Session(headers = Worker.header, timeout = aiohttp.ClientTimeout(total = 60))
         self._running = True
 
     async def do(self):
@@ -133,12 +135,22 @@ class Worker(object):
     async def _close(self):
         await self._client.close()
 
+    def pause(self):
+        self._running = False
+        asyncio.ensure_future(self._client.close())
+
+    def restart(self):
+        self._running = True
+        self._client = Session(headers = Worker.header, timeout = aiohttp.ClientTimeout(total = 60))
+        asyncio.ensure_future(self.do())
+
     async def __aenter__(self):
         if self._client.closed:
             self._client = Session(headers = Worker.header)
         return self
 
     async def __aexit__(self, exe_type, exc_value, traceback):
+        self._running = False
         await self._close()
 
 class RateLimitWorker(Worker):
@@ -166,7 +178,7 @@ class InitWorker(Worker):
 
     async def _do(self,q = "q"):
         chain = Chain("search")\
-                (type = Type("REPOSITORY"), query = f"{q} sort:forks", first = 10)\
+                (type = Type("REPOSITORY"), query = f"{q} sort:forks", first = 100)\
                 .nodes\
                 .on("Repository")\
                 .get(Chain("owner").get("login"))
@@ -177,20 +189,57 @@ class InitWorker(Worker):
             return names
 
 class FetchWorker(Worker):
+    rate_deadline = 0.15
     def __init__(self, q:asyncio.Queue, writer_owners:Writer = None
-                 , writer_repos:Writer = None):
+                 , writer_repos:Writer = None, name = "", num = -1, pool = None):
         super().__init__()
+        self.pool = pool
+        if len(name) > 1:
+            self.name = name
+        else:
+            self.name = f"worker{num}"
+            logger.debug(f"{self.name}")
         self._q = q
         self._writer_repos = writer_repos
         self._writer_owners = writer_owners
 
-    async def do(self):
-        global count
-        while self._running:
-            await self.fetch_data_from_user()
-            count += 1
-            logger.info(f"compete get {count} user data")
+    def handle_abuse(self):
+        global last_fail_time,fail_addition, min_fail_during
+        now = time.time()
+        now_fail_during = now - last_fail_time
+        last_fail_time = now 
 
+        if now_fail_during < min_fail_during:
+            fail_addition += 5
+        FetchWorker.rate_deadline *= 0.9
+        min_fail_during = min(now_fail_during, min_fail_during)
+
+        during = random.randint(30, 55)
+        during += fail_addition
+        logger.warning(f"has abuse , sleep{during}, fail_addition = {fail_addition}, min_fail_during = {min_fail_during}, now_fail_during = {now_fail_during}")
+        time.sleep(during)
+
+    async def do(self):
+        global count, start_time
+        while self._running:
+            try:
+                await self.fetch_data_from_user()
+                count += 1
+                end = time.time()
+                all_time = (end - start_time)
+                rate = count / all_time
+                logger.info(f"{self.name} compete get {count} user data, rate = {rate:.2f}count/s")
+                if rate > self.rate_deadline:
+                    during = count / self.rate_deadline - all_time
+                    logger.info(f"rate {rate} > rate_deadline {self.rate_deadline}, pausing {during:.2f}")
+                    time.sleep(during)
+                if rate > self.rate_deadline * 1.2:
+                    self.pool.decrease_worker()
+                if rate < self.rate_deadline * 0.8:
+                    self.pool.increase_worker()
+            except (asyncio.TimeoutError, aiohttp.ServerConnectionError):
+                logger.warning("exe")
+                await asyncio.sleep(3)
     async def _do(self):
         pass
 
@@ -205,7 +254,7 @@ class FetchWorker(Worker):
         for i in owners:
             loop.create_task(self._q.put(i))
 
-        logger.info(f"remining {self._q.qsize()}")
+        logger.info(f"{self.name}: remaining {self._q.qsize()}")
 
     async def handle_user(self, user:Owner):
         def generate_chain():
@@ -239,7 +288,7 @@ class FetchWorker(Worker):
                         .nodes\
                          .get('name', 'url','description','updatedAt', 'projectsUrl', 'forkCount')\
                          .get(Chain("languages")
-                              (first = 10)\
+                              (first = 100)\
                               .nodes\
                               .get("name"))
                          .get(Chain("stargazers")\
@@ -275,19 +324,19 @@ class FetchWorker(Worker):
                     .nodes\
                     .get("login"))\
                 .get(Chain("organizations")\
-                    (first = 10)\
+                    (first = 100)\
                      .get(Chain("pageInfo")\
                          .get("endCursor hasNextPage"))\
                     .nodes\
                     .get("login"))\
                 .get(Chain("repositories")\
-                    (first = 10)\
+                    (first = 100)\
                      .get(Chain("pageInfo")\
                          .get("endCursor hasNextPage"))\
                     .nodes\
                      .get('name', 'url','description','updatedAt', 'projectsUrl', 'forkCount')\
                      .get(Chain("languages")
-                          (first = 10)\
+                          (first = 100)\
                           .nodes\
                           .get("name")))
 
@@ -303,30 +352,13 @@ class FetchWorker(Worker):
                         logger.warn(f"data is None, result = {raw_data}")
                         return None
                     if raw_data['data']['user'] is None:
-                        logger.warn(f"data is None, result = {raw_data}")
-                        return None
+                        return False
                     data = raw_data['data']
                 except KeyError:
                     logger.error(f"result = {raw_data}")
                     if "abuse" in raw_data['documentation_url'] :
-                        global last_fail_time,fail_addition, min_fail_during
-                        if  last_fail_time == 0:
-                            last_fail_time = time.time()
-
-                        now = time.time()
-                        now_fail_during = now - last_fail_time
-                        last_fail_time = now 
-                        if now_fail_during < min_fail_during:
-                            fail_addition += 5
-
-                        during = random.randint(10, 20)
-                        during += fail_addition
-                        logger.warning(f"has abuse , sleep{during}, fail_addition = {fail_addition}, min_fail_during = {min_fail_during}, now_fail_during = {now_fail_during}")
-                        time.sleep(during)
-                        async with RateLimitWorker() as worker:
-                            result = await worker.do()
-                            logger.info(result)
-                        return 
+                        self.handle_abuse()
+                        return  None
 
                 if has_more_followers:
                     has_more_followers = data['user']['followers']['pageInfo']['hasNextPage']
@@ -354,61 +386,7 @@ class FetchWorker(Worker):
                 break
 
             chain = generate_chain()
-
         return True
-        #chain = Chain("user")\
-                #(login = user.login)\
-                #.get(Chain("followers")\
-                    #(first = 100)\
-                     #.get(Chain("pageInfo")\
-                         #.get("endCursor hasNextPage"))\
-                    #.nodes\
-                    #.get("login"))\
-                #.get(Chain("following")\
-                    #(first = 100)\
-                     #.get(Chain("pageInfo")\
-                         #.get("endCursor hasNextPage"))\
-                    #.nodes\
-                    #.get("login"))\
-                #.get(Chain("organizations")\
-                    #(first = 10)\
-                     #.get(Chain("pageInfo")\
-                         #.get("endCursor hasNextPage"))\
-                    #.nodes\
-                    #.get("login"))\
-                #.get(Chain("repositories")\
-                    #(first = 10)\
-                     #.get(Chain("pageInfo")\
-                         #.get("endCursor hasNextPage"))\
-                    #.nodes\
-                     #.get('name', 'url','description','updatedAt', 'projectsUrl', 'forkCount')\
-                     #.get(Chain("languages")
-                          #(first = 10)\
-                          #.nodes\
-                          #.get("name"))
-                     #.get(Chain("stargazers")\
-                         #(first = 1)\
-                         #.get("totalCount"))\
-                     #.get(Chain("watchers")\
-                         #(first = 1)\
-                         #.get("totalCount"))\
-                    #)
-
-        #async with self._client.post(self.api_url, json = chain.to_dict()) as resp:
-            #data = await resp.json()
-            #print(data)
-            #if data['data'] is None:
-                #logger.warn(f"data is None, result = {data}")
-                #return None
-            #if data['data'] is None or data['data']['user'] is None:
-                #return None
-            #owners = []
-            #followers = [Owner(node['login'], Owner.User) 
-                         #for node in  data['data']['user']['followers']['nodes']]
-            #print(f"followers = {followers}")
-
-            #result = True
-            #return result
 
     async def handle_org(self, org:Owner):
         def generate_chain():
@@ -417,7 +395,7 @@ class FetchWorker(Worker):
 
             if has_more_members:
                 chain = chain.get(Chain("members")\
-                    (first = 10)\
+                    (first = 100)\
                      .get(Chain("pageInfo")\
                          .get("endCursor hasNextPage"))\
                     .nodes\
@@ -426,13 +404,13 @@ class FetchWorker(Worker):
             if has_more_repos:
                 chain = chain\
                     .get(Chain("repositories")\
-                        (first = 10, after = repos_end_cursor)\
+                        (first = 100, after = repos_end_cursor)\
                          .get(Chain("pageInfo")\
                              .get("endCursor hasNextPage"))\
                         .nodes\
                          .get('name', 'url','description','updatedAt', 'projectsUrl', 'forkCount')\
                          .get(Chain("languages")
-                              (first = 10)\
+                              (first = 100)\
                               .nodes\
                               .get("name"))
                          .get(Chain("stargazers")\
@@ -448,19 +426,19 @@ class FetchWorker(Worker):
         chain = Chain("organization")\
                 (login = org.login)\
                 .get(Chain("members")\
-                    (first = 10)\
+                    (first = 100)\
                      .get(Chain("pageInfo")\
                          .get("endCursor hasNextPage"))\
                     .nodes\
                     .get("login"))\
                 .get(Chain("repositories")\
-                    (first = 10)\
+                    (first = 100)\
                      .get(Chain("pageInfo")\
                          .get("endCursor hasNextPage"))\
                     .nodes\
                      .get('name', 'url','description' , 'updatedAt', 'projectsUrl', 'forkCount')\
                      .get(Chain("languages")
-                          (first = 10)\
+                          (first = 100)\
                           .nodes\
                           .get("name"))
                      .get(Chain("stargazers")\
@@ -480,29 +458,10 @@ class FetchWorker(Worker):
                         logger.warn(f"data is None, result = {raw_data}")
                         return None
                 except KeyError:
-                        global last_fail_time,fail_addition, min_fail_during
-                        if  last_fail_time == 0:
-                            last_fail_time = time.time()
-
-                        now = time.time()
-                        now_fail_during = now - last_fail_time
-                        last_fail_time = now 
-                        if now_fail_during < min_fail_during:
-                            fail_addition += 5
-                            min_fail_during = now_fail_during
-
-                        during = random.randint(10, 20)
-                        during += fail_addition
-                        logger.warning(f"has abuse , sleep{during}, fail_addition = {fail_addition}, min_fail_during = {min_fail_during}, now_fail_during = {now_fail_during}")
-                        logger.error(f"result = {raw_data}")
-                        if "abuse" in raw_data['documentation_url'] :
-                            during = random.randint(10, 20)
-                            logger.warning(f"has abuse , sleep{during}")
-                            time.sleep(during)
-                            async with RateLimitWorker() as worker:
-                                result = await worker.do()
-                                logger.info(result)
-                            return 
+                    logger.error(f"result = {raw_data}")
+                    if "abuse" in raw_data['documentation_url'] :
+                        self.handle_abuse()
+                        return None
                 data = raw_data['data']
 
                 if has_more_members:
@@ -533,17 +492,60 @@ class FetchWorker(Worker):
     async def hanle_unknown(self, owner:Owner):
         result = await self.handle_user(owner)
         if result is None:
+            return 
+        if not result:
             result = await self.handle_org(owner)
         return result
 
     async def fetch_data_from_user(self):
         owner = await self._q.get()
+        logger.info(f"{self.name}: get Task , remaining {self._q.qsize()}")
         if owner.type == Owner.User:
             result = await self.handle_user(owner)
         if owner.type == Owner.Org:
             result = await self.handle_org(owner)
         else:
             result = await self.hanle_unknown(owner)
+
+class WorkerPool(object):
+    def __init__(self, q, writer_owners, writer_repos, size = 1):
+        self.f = asyncio.Future()
+        self.size = size
+        self.now = 0
+        self._active = []
+        self.w_owner = writer_owners
+        self.w_repos = writer_repos
+        self.q = q
+
+        self._inactive = []
+
+    def start(self):
+        workers = [FetchWorker(self.q, self.w_owner, self.w_repos, num = i, pool = self) for i in range(4)]
+        fut = asyncio.gather(*[w.do() for w in workers])
+        asyncio.ensure_future(fut)
+        self._active = workers
+        self.now = len(self._active)
+
+    def increase_worker(self):
+        if self.now >= self.size :
+            return 
+        worker = self._inactive.pop()
+        self._active.append(worker)
+        self.now = len(self._active)
+        worker.restart()
+        logger.info(f"increase worker now has {self.now} workers")
+
+    def decrease_worker(self):
+        if self.now <= 0:
+            return 
+        worker = self._active.pop()
+        self._inactive.append(worker)
+        self.now = len(self._active)
+        worker.pause()
+        logger.info(f"decrease worker now has {self.now} workers")
+    async def done(self):
+        await self.f
+
 
 async def run():
     queue = asyncio.Queue()
@@ -559,6 +561,15 @@ async def run():
     result = await asyncio.gather( * futs)
     await get_rate_limit()
 
+def save_queue(q:OwnerQueue):
+    prefix = "queue.data"
+    file_name = prefix + str(int(time.time() * 1000))
+    logger.info("start save queue")
+    with open(file_name, "w") as fp:
+        fp.writelines([s + "\n" for s in q._set])
+    logger.info("end save queue")
+
+
 async def test():
     async with RateLimitWorker() as worker:
         result = await worker.do()
@@ -571,20 +582,33 @@ async def test():
     async with InitWorker(q) as worker:
         result = await worker.do()
 
-    async with FetchWorker(q, writer_owners,  writer_repos) as worker:
-        result = await worker.do()
+    #async with FetchWorker(q, writer_owners,  writer_repos) as worker:
+        #result = await worker.do()
 
-    workers = [FetchWorker(q, writer_owners, writer_repos) for i in range(20)]
+    workers = [FetchWorker(q, writer_owners, writer_repos, num = i) for i in range(4)]
 
     try:
         fut = asyncio.gather(*[w.do() for w in workers])
         await fut
     except KeyboardInterrupt:
-        exit()
+        pass
     finally:
         for worker in workers:
             await worker._close()
-
+        save_queue(q)
+async def test():
+    q = OwnerQueue()
+    writer_owners = Writer("owner")
+    writer_repos = Writer("repos")
+    loop.create_task(writer_owners.run())
+    loop.create_task(writer_repos.run())
+    async with InitWorker(q) as worker:
+        result = await worker.do()
+    pool = WorkerPool(q, writer_owners, writer_repos, 4)
+    pool.start()
+    pool.decrease_worker()
+    pool.increase_worker()
+    await pool.done()
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()
