@@ -122,7 +122,7 @@ async def fetch_data_from_user(q:asyncio.Queue):
 
 class Worker(object):
     header = {
-        "Authorization":"bearer 290b3e2194e0d5f1f02393e75d0c4b7fe0295031", 
+        "Authorization":"bearer  058c6296c850e5d1511faccdd3ead44e92281dd8", 
         "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0"
     }
     api_url = "https://api.github.com/graphql"
@@ -359,6 +359,7 @@ class FetchWorker(Worker):
         has_more_following = True
         has_more_orgs = True
         has_more_repos = True
+        has = 0
         while self._running :
             async with self._client.post(self.api_url, json = chain.to_dict()) as resp:
                 try:
@@ -374,6 +375,14 @@ class FetchWorker(Worker):
                     if "abuse" in raw_data['documentation_url'] :
                         self.handle_abuse()
                         return  None
+                if has  % 20 == 0:
+                    global count, count1
+                    count1 += 1
+                    count += 1
+                    await asyncio.sleep(3)
+
+                if has  % 10 == 0:
+                    await asyncio.sleep(1)
 
                 if has_more_followers:
                     has_more_followers = data['user']['followers']['pageInfo']['hasNextPage']
@@ -470,9 +479,9 @@ class FetchWorker(Worker):
                     )
         has_more_members = True
         has_more_repos = True
-        self.has = 0
+        has = 0
         while self._running :
-            self.has += 1
+            has += 1
             async with self._client.post(self.api_url, json = chain.to_dict()) as resp:
                 raw_data = await resp.json()
                 try:
@@ -489,7 +498,13 @@ class FetchWorker(Worker):
                     logger.error(f"KeyError data = {data}")
                     return 
 
-                if self.has  % 5 == 0:
+                if has  % 5 == 0:
+                    await asyncio.sleep(3)
+                
+                if has  % 20 == 0:
+                    global count, count1
+                    count1 += 1
+                    count += 1
                     await asyncio.sleep(3)
                 if has_more_members:
                     has_more_members = data['organization']\
@@ -498,7 +513,6 @@ class FetchWorker(Worker):
                             ['members']['pageInfo']['endCursor']
                     self.extract_owners(data['organization']\
                                         ['members']['nodes'], Owner.User)
-
 
                 if has_more_repos:
                     has_more_repos = data['organization']\
