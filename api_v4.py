@@ -15,7 +15,7 @@ import threading
 
 logger = get_logger(__name__)
 header = {
-    "Authorization":"bearer 6d551a019223e4345e064de043d1fe46b9cd0260", 
+    "Authorization":"bearer 290b3e2194e0d5f1f02393e75d0c4b7fe0295031", 
     "User-Agent": "Mozilla/5.0 (X11; Ubuntu; Linux x86_64; rv:62.0) Gecko/20100101 Firefox/62.0"
 }
 #sample  -  - 
@@ -68,7 +68,7 @@ owner_chain = Chain("repositoryOwner")\
 #logger.info(resp.json())
 
 logger.info(owner_chain.to_dict())
-resp = Post("https://api.github.com/graphql", json =owner_chain.to_dict(), headers = header )
+resp = Post("https://api.github.com/graphql", json =search_chain.to_dict(), headers = header )
 #resp = Post("https://api.github.com/graphql", json =t, headers = header )
 logger.info(resp.json())
 
