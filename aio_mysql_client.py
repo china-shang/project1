@@ -13,7 +13,8 @@ import functools
 
 logger = get_logger(__name__)
 logger.setLevel(logging.DEBUG)
-
+server_addr = "0.0.0.0"
+server_port = 1111
 
 with open("mysql.json") as fp:
     _config = json.load(fp)
@@ -136,7 +137,7 @@ class DBClient(object):
 
 
 async def test():
-    cl = DBClient("0.0.0.0", 8080)
+    cl = DBClient(server_addr, server_port)
     for i in range(10):
         u = BaseUser(str(i))
         cl.put(i)
@@ -147,7 +148,7 @@ async def test():
     test_users = []
     for i in range(0, 11):
         test_users.append(BaseUser(str(i), i % 2))
-    q = DBClient("0.0.0.0", 8080)
+    q = DBClient(server_addr, server_port)
 
     #for i in test_users:
         #q.put(i)

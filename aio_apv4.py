@@ -357,12 +357,10 @@ class FetchWorker(Worker):
         self.this = 0
         while self._running:
             v1, v2, v3 = self.statist.get_avg_speed()
-            logger.info(f"repos rate = {v1:.2f}, user rate = {v2:.2f},req rate = {v3:.2f}")
+            logger.info(f"repos rate = {v1:.2f}, user rate = {v2:.2f},req rate = {v3:.2f}, workers = {self.pool.now}")
             await self._do()
-
             if v3 < 0.8:
                 self.pool.increase_worker()
-
             if v3 > 1.1:
                 self.pool.decrease_worker()
 
@@ -373,6 +371,8 @@ class FetchWorker(Worker):
         except (asyncio.TimeoutError, aiohttp.ServerConnectionError):
             logger.warning("execept Exception")
             await asyncio.sleep(3)
+        except Exception as e:
+            logger.error(f"has error {e}")
 
     def overspeed(self, rate):
         pass
@@ -435,7 +435,8 @@ class FetchWorker(Worker):
 
             chain = Chain("user")\
                     (login = user.name)
-            chain = gen_chain(init = True)
+
+            #chain = gen_chain(init = True)
             if has_more_followers:
                 chain = chain\
                     .get(Chain("followers")\

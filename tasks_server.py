@@ -11,6 +11,8 @@ import logging
 logger = get_logger(__name__)
 logger.setLevel(logging.DEBUG)
 
+server_addr = "0.0.0.0"
+server_port = 1111
 
 class Server(object):
     def __init__(self, pool:QueuePool):
@@ -60,7 +62,7 @@ async def test():
 
     runner = web.AppRunner(app)
     await runner.setup()
-    svr = web.TCPSite(runner, "0.0.0.0", 8080)
+    svr = web.TCPSite(runner, server_addr, server_port)
     await svr.start()
 
     logger.info("has start")
