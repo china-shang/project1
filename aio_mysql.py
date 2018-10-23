@@ -8,7 +8,7 @@ from logger import get_logger
 import logging
 
 logger = get_logger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 body = """
 CREATE TABLE IF NOT EXISTS `git_owner`(
@@ -68,7 +68,7 @@ class QueuePool(object):
     def put_user(self, user):
         self._will_put.add(user)
         if len(self._will_put) > 10:
-            logger.debug(f"_will_put > count, will put to mysqlk")
+            logger.debug(f" will put to mysqlk")
             if not self._putting:
                 asyncio.ensure_future(self.put_users(self._will_put.copy()))
                 self._putting = True
@@ -80,7 +80,7 @@ class QueuePool(object):
         existed = await self._check_exist(users)
         if existed:
             users.difference_update(existed)
-        logger.debug(f"users = {users}")
+        logger.info(f"will put users = {users}")
         await self._insert(users)
         self._putting = False
 
@@ -108,7 +108,7 @@ class QueuePool(object):
                     await asyncio.sleep(3)
                     continue
 
-                logger.debug("will updating")
+                #logger.debug("will updating")
                 s1, s2 = self._fetched.copy(), self._user_fetched.copy()
                 await self._update(s1, s2)
 
@@ -202,9 +202,9 @@ class QueuePool(object):
             names = f"{names[:-1]}"
 
             if not s or len(s) == 0:
-                body = f"SELECT  name,is_org FROM git_owner where fetched=FALSE  LIMIT 4;"
+                body = f"SELECT  name,is_org FROM git_owner where fetched=FALSE  LIMIT 10;"
             else:
-                body = f"SELECT  name, is_org FROM git_owner where fetched=FALSE AND name NOT IN ({names}) LIMIT 4;"
+                body = f"SELECT  name, is_org FROM git_owner where fetched=FALSE AND name NOT IN ({names}) LIMIT 10;"
             logger.debug(body)
             return body
 
@@ -232,9 +232,9 @@ class QueuePool(object):
             names = f"{names[:-1]}"
 
             if not s or len(s) == 0:
-                body = f"SELECT  name, is_org FROM git_owner where users_fetched=FALSE  LIMIT 4;"
+                body = f"SELECT  name, is_org FROM git_owner where users_fetched=FALSE  LIMIT 10;"
             else:
-                body = f"SELECT  name, is_org FROM git_owner where users_fetched=FALSE AND name NOT IN ({names}) LIMIT 4;"
+                body = f"SELECT  name, is_org FROM git_owner where users_fetched=FALSE AND name NOT IN ({names}) LIMIT 10;"
             logger.debug(body)
             return body
 

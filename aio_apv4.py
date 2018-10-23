@@ -97,13 +97,13 @@ class Session(ClientSession):
 
     async def _request(self, *args, **kargs):
         Session.statist.increase_req()
-        logger.debug(f"{self.statist.get_avg_speed()[2]:.2f}")
+        #logger.debug(f"{self.statist.get_avg_speed()[2]:.2f}")
         _, _, rate = self.statist.get_avg_speed()
         if rate > 1.0:
             expect_time = self.statist.req_count / 1.0
             during = time.time() - self.statist.start_time
             sleep_time = (expect_time - during) * 1.1
-            logger.warning(f"overspeed , then sleep {sleep_time}")
+            #logger.warning(f"overspeed , then sleep {sleep_time}")
             await asyncio.sleep(sleep_time)
         return await super()._request(*args, **kargs)
 
