@@ -385,8 +385,12 @@ class FetchWorker(Worker):
         logger.info(f"add repos:{count} from {self.owner.name} all has {self.statist.all_repo}")
         
     def extract_owners(self, owners, type = Owner.Unkonwn):
-        owners = [Owner(i["login"], type) for i in owners if not self._q.has(i['login'])]
-        self._writer_owners.add_data(owners)
+        if type == Owner.Org:
+            is_org = True
+        else:
+            is_org = False
+        owners = [BaseUser(i["login"],is_org ) for i in owners if not self._q.has(i['login'])]
+        #self._writer_owners.add_data(owners)
         #logger.info(f"get owners:{owners} from {self.owner.name}")
         for i in owners:
             self._q.put(i)
