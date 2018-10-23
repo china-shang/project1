@@ -260,11 +260,12 @@ class Worker(object):
 
     def pause(self):
         self._running = False
-        asyncio.ensure_future(self._client.close())
+        #asyncio.ensure_future(self._client.close())
 
     def restart(self):
         self._running = True
-        self._client = Session(headers = Worker.header, timeout = aiohttp.ClientTimeout(total = 60))
+        if self._client.closed:
+            self._client = Session(headers = Worker.header, timeout = aiohttp.ClientTimeout(total = 60))
         asyncio.ensure_future(self.do())
 
     async def __aenter__(self):
@@ -364,18 +365,22 @@ class FetchWorker(Worker):
             if v3 > 1.1:
                 self.pool.decrease_worker()
 
+        logger.info(f"running is {self._running}, now close client")
+        await self._client.close()
+
+
     async def _do(self):
         try:
             await self.fetch_data()
             self.statist.increase_user()
-        except (asyncio.TimeoutError, aiohttp.ServerConnectionError):
-            logger.warning("execept Exception")
-            await asyncio.sleep(3)
+        #except (asyncio.TimeoutError, aiohttp.ServerConnectionError):
+            #logger.warning("execept Exception {e}")
+            #await asyncio.sleep(3)
         except Exception as e:
             logger.error(f"has error {e}")
         finally:
-            if self._client.closed:
-                logger.error(f"client closed , now start new session")
+            if self._running and self._client.closed:
+                logger.error(f"client closed and running is {self._running} , now start new session")
                 self._client = Session( headers = Worker.header, timeout = aiohttp.ClientTimeout(total = 60))
 
     def overspeed(self, rate):
@@ -733,7 +738,7 @@ class WorkerPool(object):
         logger.info(f"increase worker now has {self.now} workers")
 
     def decrease_worker(self):
-        if self.now <= 0:
+        if self.now <= 1:
             return 
         worker = self._active.pop()
         self._inactive.append(worker)
