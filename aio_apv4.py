@@ -374,7 +374,7 @@ class FetchWorker(Worker):
         except Exception as e:
             logger.error(f"has error {e}")
         finally:
-            if self._client.closed():
+            if self._client.closed:
                 logger.error(f"client closed , now start new session")
                 self._client = Session( headers = Worker.header, timeout = aiohttp.ClientTimeout(total = 60))
 
