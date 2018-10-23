@@ -40,6 +40,7 @@ class QueuePool(object):
         self._will_fetched = set()
         self._start_update_count = 4
         self._running = True
+        self._putting = False
         self._will_put = set()
 
     async def create_pool(self):
@@ -59,8 +60,12 @@ class QueuePool(object):
         self._will_put.add(user)
         if len(self._will_put) > 4:
             logger.debug(f"_will_put > count, will put to mysqlk")
-            asyncio.ensure_future(self.put_users(self._will_put.copy()))
-            self._will_put.clear()
+            if not self._putting:
+                asyncio.ensure_future(self.put_users(self._will_put.copy()))
+                self._putting = True
+                self._will_put.clear()
+            else:
+                logger.debug("but now putting, so wait")
 
     async def put_users(self, users:set):
         existed = await self._check_exist(users)
@@ -68,6 +73,7 @@ class QueuePool(object):
             users.difference_update(existed)
         logger.debug(f"users = {users}")
         await self._insert(users)
+        self._putting = False
 
     def complete(self,data,  produce = False):
         if isinstance(data, str):

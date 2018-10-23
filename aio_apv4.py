@@ -389,13 +389,13 @@ class FetchWorker(Worker):
             is_org = True
         else:
             is_org = False
-        owners = [BaseUser(i["login"],is_org ) for i in owners if not self._q.has(i['login'])]
+        owners = [BaseUser(i["login"],is_org ) for i in owners )]
         #self._writer_owners.add_data(owners)
         #logger.info(f"get owners:{owners} from {self.owner.name}")
         for i in owners:
             self._q.put(i)
 
-        logger.info(f"{self.name}:  add {len(owners)} from {self.owner.name}")
+        #logger.info(f"{self.name}:  add {len(owners)} from {self.owner.name}")
 
     async def handle_user(self, user:Owner):
         def gen_chain(init = False):
