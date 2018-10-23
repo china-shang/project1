@@ -36,7 +36,7 @@ class Server(object):
         data = await req.json()
         logger.debug(data)
         for i in data:
-            logger.debug(f"complete = {i}")
+            #logger.debug(f"complete = {i}")
             self.pool.complete(i[0],i[1])
         resp = web.Response(text=json.dumps({"status":"success"}), content_type = "application/json")
         return resp
@@ -65,6 +65,7 @@ async def test():
     svr = web.TCPSite(runner, server_addr, server_port)
     await svr.start()
 
+    logger.info(f"server started at {server_addr}:{server_port}")
     f = asyncio.Future()
     await f
 

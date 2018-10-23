@@ -38,10 +38,11 @@ class QueuePool(object):
         self._user_fetched = set()
         self._will_user_fetched = set()
         self._will_fetched = set()
-        self._start_update_count = 4
+        self._start_update_count = 10
         self._running = True
         self._putting = False
         self._will_put = set()
+        self._getting = False
 
     async def create_pool(self):
         self.pool = await aiomysql.create_pool(**_config, autocommit=True, connect_timeout = 40)
@@ -51,14 +52,21 @@ class QueuePool(object):
         await self.pool.close()
 
     async def get_users(self, produce = False):
+        # if getting , then wait to complete
+        while self._getting:
+            await asyncio.sleep(0.3)
+
+        self._getting = True
         t = await self._fetch(produce)
+        self._getting = False
+
         logger.info(f"get_users {t}")
         return t
 
 
     def put_user(self, user):
         self._will_put.add(user)
-        if len(self._will_put) > 4:
+        if len(self._will_put) > 10:
             logger.debug(f"_will_put > count, will put to mysqlk")
             if not self._putting:
                 asyncio.ensure_future(self.put_users(self._will_put.copy()))
@@ -84,7 +92,7 @@ class QueuePool(object):
             logger.error(f"{type(data)}")
             raise TypeError
 
-        logger.debug("add complete")
+        #logger.debug("add complete")
         if produce:
             self._user_fetched.add(user)
         else:
