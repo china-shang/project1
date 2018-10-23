@@ -61,6 +61,7 @@ class QueuePool(object):
         t = await self._fetch(produce)
         self._getting = False
 
+        logger.info(f"{self._will_fetched}, {self._will_user_fetched}")
         logger.info(f"get_users {t}")
         return t
 

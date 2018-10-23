@@ -9,13 +9,14 @@ from logger import get_logger
 import logging
 
 logger = get_logger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 server_addr = "0.0.0.0"
 server_port = 1111
 
 class Server(object):
     def __init__(self, pool:QueuePool):
+
         self.pool = pool
 
     async def start(self):
@@ -28,13 +29,13 @@ class Server(object):
         data = await request.json()
         for i in data:
             self.pool.put_user(BaseUser(i['name'], i['is_org']))
-        logger.debug(f"put{data}")
+        #logger.debug(f"put{data}")
         resp = web.Response(text=json.dumps({"status":"success"}), content_type = "application/json")
         return resp
 
     async def complete(self, req):
         data = await req.json()
-        logger.debug(data)
+        #logger.debug(data)
         for i in data:
             #logger.debug(f"complete = {i}")
             self.pool.complete(i[0],i[1])
