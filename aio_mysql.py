@@ -54,6 +54,7 @@ class QueuePool(object):
     async def get_users(self, produce = False):
         # if getting , then wait to complete
         while self._getting:
+            logger.info("get , but now getting, ")
             await asyncio.sleep(0.3)
 
         self._getting = True

@@ -690,7 +690,7 @@ class FetchWorker(Worker):
             self._fetch_users = True
 
         owner = self.owner
-        logger.info(f"{self.name}: get Task ")
+        logger.info(f"{self.name}: get Task {owner.name}")
         #if not owner.is_org:
             #result = await self.handle_user(owner)
         if owner.is_org:
