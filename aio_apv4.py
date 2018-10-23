@@ -389,7 +389,7 @@ class FetchWorker(Worker):
             is_org = True
         else:
             is_org = False
-        owners = [BaseUser(i["login"],is_org ) for i in owners )]
+        owners = [BaseUser(i["login"],is_org) for i in owners ]
         #self._writer_owners.add_data(owners)
         #logger.info(f"get owners:{owners} from {self.owner.name}")
         for i in owners:
