@@ -6,12 +6,42 @@ import requests
 from requests import Session, Request, get as Get
 from bs4 import BeautifulSoup as Soup
 
-def f(a = 3):
+def gen_body1():
+    name = "name"
+    is_org = True
+    values = ""
+    for i in range(4):
+        values = f"{values}('{name}', '{is_org}'),"
+    values = values[:-1]
 
-    def g():
-        g_var = "this is g_var"
-        def k():
-            k_var = "this is k_var"
+    body = f"INSERT INTO git_owner (name,is_org) VALUES {values}"
 
-    print(g_var, k_var)
-f()
+
+    return body
+
+
+def test():
+    print(gen_body1())
+
+def f2():
+    f1()
+
+def f1():
+    pass
+
+
+class A(B):
+    def f():
+        B.test()
+
+class B:
+    def test():
+        pass
+
+
+
+if __name__ == "__main__":
+    test()
+    f2()
+    a = A()
+    a.f()

@@ -1,2 +1,7 @@
 __pycache__
 *.pyc
+token.json
+*.log
+test
+
+
