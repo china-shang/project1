@@ -793,10 +793,9 @@ async def test():
     Session.statist = statist
 
     async with RateLimitWorker() as worker:
-        result = await worker.do()
-        logger.info(result)
+        result = await worker.do() logger.info(result)
     #q = OwnerQueue()
-    q = DBClient("0.0.0.0", 8080)
+    q = DBClient()
     async with InitWorker(q) as worker:
         result = await worker.do()
 

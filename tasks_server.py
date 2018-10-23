@@ -65,8 +65,8 @@ async def test():
     svr = web.TCPSite(runner, server_addr, server_port)
     await svr.start()
 
-    logger.info("has start")
-    await asyncio.sleep(1000)
+    f = asyncio.Future()
+    await f
 
 if __name__ == "__main__":
     loop = asyncio.get_event_loop()

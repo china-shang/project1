@@ -13,7 +13,7 @@ import functools
 
 logger = get_logger(__name__)
 logger.setLevel(logging.DEBUG)
-server_addr = "0.0.0.0"
+server_addr = "54.250.173.187"
 server_port = 1111
 
 with open("mysql.json") as fp:
@@ -23,7 +23,7 @@ class LackUser(Exception):
     pass
 
 class DBClient(object):
-    def __init__(self, server, port):
+    def __init__(self, server = server_addr, port = server_port):
         self.server = server
         self.port = port
         self._client = Session(timeout = aiohttp.ClientTimeout(total = 60), json_serialize = user_dumps)
