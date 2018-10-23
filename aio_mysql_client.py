@@ -80,7 +80,7 @@ class DBClient(object):
     def put(self, task):
         self._put_buffer.append(task)
         
-        if not self._putting and len(self._put_buffer) > 1:
+        if not self._putting and len(self._put_buffer) > 20:
             self._putting = True
             asyncio.ensure_future(self._put())
 
@@ -97,7 +97,7 @@ class DBClient(object):
 
         self._complete_buffer.append((task, produce))
 
-        if not self._completting and len(self._complete_buffer) > 1:
+        if not self._completting and len(self._complete_buffer) > 20:
             asyncio.ensure_future(self._complete())
             self._completting = True
 
