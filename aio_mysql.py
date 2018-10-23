@@ -206,7 +206,7 @@ class QueuePool(object):
                 body = f"SELECT  name,is_org FROM git_owner where fetched=FALSE  LIMIT 10;"
             else:
                 body = f"SELECT  name, is_org FROM git_owner where fetched=FALSE AND name NOT IN ({names}) LIMIT 10;"
-            logger.debug(body)
+            logger.info(body)
             return body
 
         body = gen_body()
