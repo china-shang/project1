@@ -331,7 +331,7 @@ class FetchWorker(Worker):
         self._writer_owners = writer_owners
 
     def handle_abuse(self):
-        print(self.statist.get_avg_speed)
+        pass
         #global last_fail_time,fail_addition, min_fail_during, count1, start_time
         #now = time.time()
         #now_fail_during = now - last_fail_time
@@ -356,25 +356,22 @@ class FetchWorker(Worker):
     async def do(self):
         self.this = 0
         while self._running:
-            print(self.statist.get_avg_speed())
+            v1, v2, v3 = self.statist.get_avg_speed()
+            logger.info(f"repos rate = {v1:.2f}, user rate = {v2:.2f},req rate = {v3:.2f}")
             await self._do()
+
+            if v3 < 0.8:
+                self.pool.increase_worker()
+
+            if v3 > 1.1:
+                self.pool.decrease_worker()
 
     async def _do(self):
         try:
             await self.fetch_data()
             self.statist.increase_user()
-            #logger.info(f"{self.name} compete get {self.statist.all_user} user data, rate = {self.statist.get_avg_speed:.2f}count/s")
-
-            #if rate > self.rate_deadline:
-                #during = count / self.rate_deadline - all_time
-                #logger.info(f"rate {rate} > rate_deadline {self.rate_deadline}, pausing {during:.2f}")
-                #time.sleep(during)
-            #if rate > self.rate_deadline * 1.2:
-                #self.pool.decrease_worker()
-            #if rate < self.rate_deadline * 0.8:
-                #self.pool.increase_worker()
         except (asyncio.TimeoutError, aiohttp.ServerConnectionError):
-            logger.warning("exe")
+            logger.warning("execept Exception")
             await asyncio.sleep(3)
 
     def overspeed(self, rate):
@@ -385,7 +382,7 @@ class FetchWorker(Worker):
         self.statist.increase_repos(count)
         #logger.info(f"get repos:{repos}")
         self._writer_repos.add_data(repos)
-        #logger.info(f"add repos:{count} from {self.owner.name} all has {repos_count}")
+        logger.info(f"add repos:{count} from {self.owner.name} all has {self.statist.all_repo}")
         
     def extract_owners(self, owners, type = Owner.Unkonwn):
         owners = [Owner(i["login"], type) for i in owners if not self._q.has(i['login'])]
@@ -393,6 +390,7 @@ class FetchWorker(Worker):
         #logger.info(f"get owners:{owners} from {self.owner.name}")
         for i in owners:
             self._q.put(i)
+
         logger.info(f"{self.name}:  add {len(owners)} from {self.owner.name}")
 
     async def handle_user(self, user:Owner):
@@ -694,7 +692,6 @@ class FetchWorker(Worker):
             result = await self.handle_org(owner)
         else:
             result = await self.hanle_unknown(owner)
-
         self._q.complete(owner, self._fetch_users)
 
 class WorkerPool(object):
@@ -795,8 +792,8 @@ async def test():
         logger.info(result)
     #q = OwnerQueue()
     q = DBClient("0.0.0.0", 8080)
-    #async with InitWorker(q) as worker:
-        #result = await worker.do()
+    async with InitWorker(q) as worker:
+        result = await worker.do()
 
     #await asyncio.sleep(10)
     writer_owners = Writer("owner")
