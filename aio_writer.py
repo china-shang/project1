@@ -5,7 +5,7 @@ import time
 import json
 
 class Writer(object):
-    _save_deadline = 10
+    _save_deadline = 1000
 
     def __init__(self,name = None):
         self._running = True
