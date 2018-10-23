@@ -214,9 +214,9 @@ class QueuePool(object):
             async with conn.cursor() as cur:
                 await cur.execute(body)
                 t = await cur.fetchall()
+                self._will_fetched.update(set([i[0] for i in t]))
                 result = set([BaseUser(i[0], i[1]) for i in t])
-                logger.debug(result)
-                self._will_fetched.update(result)
+                #logger.debug(result)
                 await cur.execute("SELECT count(*) FROM git_owner where fetched=False GROUP BY name")
                 remain = cur.rowcount
                 if remain < 100:
@@ -244,9 +244,8 @@ class QueuePool(object):
             async with conn.cursor() as cur:
                 await cur.execute(body)
                 t = await cur.fetchall()
+                self._will_user_fetched.update(set([i[0] for i in t]))
                 result = set([BaseUser(i[0], i[1]) for i in t])
-                self._will_user_fetched.update(result)
-                logger.debug(result)
                 return result
 
 async def create_table(loop):
