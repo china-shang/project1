@@ -244,7 +244,7 @@ async def create_table(loop):
     async with conn.cursor() as cur:
         await cur.execute('DROP TABLE IF EXISTS git_owner;')
         await cur.execute(body)
-        await cur.execute('INSERT INTO git_owner (name, is_org ) VALUES("上的反思的", TrUE);')
+        #await cur.execute('INSERT INTO git_owner (name, is_org ) VALUES("上的反思的", TrUE);')
         await cur.execute('select *, count( * ) from git_owner where name in ("上的反思的", "4") group by name;')
 
         res = await cur.fetchall()
