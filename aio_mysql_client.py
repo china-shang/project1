@@ -12,7 +12,7 @@ import logging
 import functools
 
 logger = get_logger(__name__)
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 server_addr = "54.250.173.187"
 server_port = 1111
 
@@ -97,7 +97,7 @@ class DBClient(object):
 
         self._complete_buffer.append((task, produce))
 
-        if not self._completting and len(self._complete_buffer) > 20:
+        if not self._completting and len(self._complete_buffer) > 10:
             asyncio.ensure_future(self._complete())
             self._completting = True
 

@@ -506,7 +506,7 @@ class FetchWorker(Worker):
         chain = gen_chain(init = True)
         while self._running :
             async with self._client.post(self.api_url, json = chain.to_dict()) as resp:
-                print(self.statist.get_avg_speed())
+                #print(self.statist.get_avg_speed())
                 try:
                     raw_data = await resp.json()
                     if raw_data['data'] is None:
@@ -631,7 +631,7 @@ class FetchWorker(Worker):
         chain = gen_chain(init = True)
         while self._running :
             async with self._client.post(self.api_url, json = chain.to_dict()) as resp:
-                print(self.statist.get_avg_speed())
+                #print(self.statist.get_avg_speed())
                 raw_data = await resp.json()
                 try:
                     if raw_data['data'] is None:
