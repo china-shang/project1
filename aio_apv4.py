@@ -502,6 +502,9 @@ class FetchWorker(Worker):
             has_more_followers = False
             has_more_following = False
             has_more_orgs = False
+        else:
+            has_more_repos = False
+
 
         chain = gen_chain(init = True)
         while self._running :
@@ -628,6 +631,8 @@ class FetchWorker(Worker):
         has_more_repos = True
         if not self._fetch_users:
             has_more_members = False
+        else:
+            has_more_repos = False
         chain = gen_chain(init = True)
         while self._running :
             async with self._client.post(self.api_url, json = chain.to_dict()) as resp:
