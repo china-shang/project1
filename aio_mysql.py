@@ -42,7 +42,7 @@ class QueuePool(object):
         self._running = True
         self._putting = False
         self._will_put = set()
-        self._getting = False
+        #self._putting = False
 
     async def create_pool(self):
         self.pool = await aiomysql.create_pool(**_config, autocommit=True, connect_timeout = 40)
@@ -53,15 +53,15 @@ class QueuePool(object):
 
     async def get_users(self, produce = False):
         # if getting , then wait to complete
-        while self._getting:
+        while self._putting:
             logger.info("get , but now getting, ")
             await asyncio.sleep(0.3)
 
-        self._getting = True
+        self._putting = True
         t = await self._fetch(produce)
-        self._getting = False
+        self._putting = False
 
-        logger.info(f"{self._will_fetched}, {self._will_user_fetched}")
+        #logger.info(f"{self._will_fetched}, {self._will_user_fetched}")
         logger.info(f"get_users {t}")
         return t
 
@@ -71,8 +71,8 @@ class QueuePool(object):
         if len(self._will_put) > 10:
             logger.debug(f" will put to mysqlk")
             if not self._putting:
-                asyncio.ensure_future(self.put_users(self._will_put.copy()))
                 self._putting = True
+                asyncio.ensure_future(self.put_users(self._will_put.copy()))
                 self._will_put.clear()
             else:
                 logger.debug("but now putting, so wait")
@@ -82,7 +82,11 @@ class QueuePool(object):
         if existed:
             users.difference_update(existed)
         logger.info(f"will put users = {users}")
-        await self._insert(users)
+        try:
+            await self._insert(users)
+        except Exception as e:
+            logger.error(f"insert error {e}")
+
         self._putting = False
 
     def complete(self,data,  produce = False):
@@ -111,7 +115,11 @@ class QueuePool(object):
 
                 #logger.debug("will updating")
                 s1, s2 = self._fetched.copy(), self._user_fetched.copy()
+                while self._putting:
+                    await asyncio.sleep(0.3)
+                self._putting = True
                 await self._update(s1, s2)
+                self._putting = False
 
                 self._fetched.difference_update(s1)
                 self._user_fetched.difference_update(s2)

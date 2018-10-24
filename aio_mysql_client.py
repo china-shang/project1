@@ -107,7 +107,7 @@ class DBClient(object):
                 pass
 
             res = await resp.json()
-            logger.info(f"put {res}")
+            logger.info(f"put {len(self._put_buffer)} users, {res}")
             self._put_buffer.clear()
             self._putting = False
 
