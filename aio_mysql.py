@@ -129,6 +129,8 @@ class QueuePool(object):
 
                 self._will_user_fetched.difference_update(s2)
                 self._user_fetched.difference_update(s2)
+                s1.clear()
+                s2.clear()
                 logger.info(f"{self._fetched}{self._user_fetched}{self._will_fetched}{self._will_user_fetched}{s1}{s2}")
                 del s1, s2
 
