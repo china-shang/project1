@@ -105,6 +105,7 @@ class QueuePool(object):
             self._fetched.add(user)
 
     async def update(self):
+        logger.info("update start")
         async def do():
             while self._running:
                 l1, l2 = len(self._fetched), len(self._user_fetched)
@@ -114,10 +115,10 @@ class QueuePool(object):
                     continue
 
                 #logger.debug("will updating")
-                s1, s2 = self._fetched.copy(), self._user_fetched.copy()
                 while self._putting:
                     await asyncio.sleep(0.3)
                 self._putting = True
+                s1, s2 = self._fetched.copy(), self._user_fetched.copy()
                 await self._update(s1, s2)
                 self._putting = False
 
@@ -134,10 +135,12 @@ class QueuePool(object):
             names = ""
             for i in map(lambda x:f"'{x}',", fetched):
                 names = f"{names}{i}"
+
             names = f"{names[:-1]}"
             body = f"UPDATE git_owner SET fetched = True where name in ({names})"
             logger.debug(body)
             return body
+
         def gen_body_users_fetched():
             names = ""
             for i in map(lambda x:f"'{x}',", all_fetched):
@@ -155,6 +158,9 @@ class QueuePool(object):
                     await cur.execute(gen_body_fetched())
                 if len(all_fetched) > 0:
                     await cur.execute(gen_body_users_fetched())
+
+                count = len(fetched) + len(fetchall)
+                logger.info(f"complete = {count}")
 
     async def _insert(self, users):
         def gen_body():
