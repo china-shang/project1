@@ -102,23 +102,27 @@ class DBClient(object):
             self._completting = True
 
     async def _put(self):
-        async with self._client.post(f"http://{self.server}:{self.port}/put", json = self._put_buffer ) as resp:
+        t = self._put_buffer
+        self._put_buffer.clear()
+
+        async with self._client.post(f"http://{self.server}:{self.port}/put", json = t ) as resp:
             if self._has_error(resp):
                 pass
 
             res = await resp.json()
-            logger.info(f"put {len(self._put_buffer)} users, {res}")
-            self._put_buffer.clear()
+            logger.info(f"put {len(t)} users, {res}")
             self._putting = False
 
     async def _complete(self):
-        async with self._client.post(f"http://{self.server}:{self.port}/complete", json = self._complete_buffer ) as resp:
+        t = self._complete_buffer.copy()
+        self._complete_buffer.clear()
+        async with self._client.post(f"http://{self.server}:{self.port}/complete", json = t ) as resp:
             if self._has_error(resp):
                 pass
 
             res = await resp.json()
             logger.debug(res)
-            self._put_buffer.clear()
+            self._complete_buffer.clear()
             self._completting = False
 
     async def _get(self, produce = False):
