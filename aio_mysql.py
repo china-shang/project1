@@ -159,7 +159,7 @@ class QueuePool(object):
                 if len(all_fetched) > 0:
                     await cur.execute(gen_body_users_fetched())
 
-                count = len(fetched) + len(fetchall)
+                count = len(fetched) + len(all_fetched)
                 logger.info(f"complete = {count}")
 
     async def _insert(self, users):
